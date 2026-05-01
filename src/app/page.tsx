@@ -1,65 +1,130 @@
-import Image from "next/image";
+import Link from "next/link";
+import { createClient } from "@/lib/supabase/server";
+import type { Post } from "@/lib/types";
 
-export default function Home() {
+export const dynamic = "force-dynamic";
+
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<{ kind?: string; q?: string }>;
+}) {
+  const { kind, q } = await searchParams;
+  const supabase = await createClient();
+
+  let query = supabase
+    .from("posts")
+    .select("*, profiles(display_name)")
+    .eq("status", "open")
+    .order("created_at", { ascending: false })
+    .limit(50);
+
+  if (kind === "offer" || kind === "request") query = query.eq("kind", kind);
+  if (q) query = query.ilike("herb", `%${q}%`);
+
+  const { data: posts } = await query;
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <div className="space-y-6">
+      <section className="space-y-1 pt-2">
+        <h1 className="font-serif text-3xl font-bold leading-tight text-forest-deep">
+          Share herbs with your neighbors.
+        </h1>
+        <p className="text-base text-bark-soft">
+          Got too much rosemary? Need fresh basil? Trade with people nearby in Phoenix.
+        </p>
+      </section>
+
+      <form action="/" className="flex gap-2">
+        <input
+          name="q"
+          defaultValue={q ?? ""}
+          placeholder="🔍  Search a herb..."
+          className="flex-1 rounded-full border-2 border-cream-deep bg-white px-5 py-3 text-base placeholder:text-bark-soft/60 focus:border-forest focus:outline-none"
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+        {q && (
+          <Link
+            href={kind ? `/?kind=${kind}` : "/"}
+            className="flex items-center justify-center rounded-full bg-cream-deep px-4 text-bark-soft"
+            aria-label="Clear search"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+            ✕
+          </Link>
+        )}
+      </form>
+
+      <div className="flex gap-2">
+        <FilterChip current={kind} value={undefined} label="Everything" />
+        <FilterChip current={kind} value="offer" label="🌱 Offers" />
+        <FilterChip current={kind} value="request" label="🙏 Requests" />
+      </div>
+
+      {(posts ?? []).length === 0 ? (
+        <div className="rounded-3xl border-2 border-dashed border-cream-deep bg-white/60 p-10 text-center">
+          <p className="font-serif text-xl text-forest-deep">No posts yet</p>
+          <p className="mt-2 text-sm text-bark-soft">Tap &ldquo;+ New post&rdquo; to start it off.</p>
         </div>
-      </main>
+      ) : (
+        <ul className="space-y-3">
+          {(posts as Post[]).map((p) => (
+            <li key={p.id}>
+              <Link
+                href={`/posts/${p.id}`}
+                className="block rounded-3xl border-2 border-cream-deep bg-white p-5 transition active:scale-[0.99]"
+              >
+                <div className="flex items-baseline justify-between gap-3">
+                  <h3 className="font-serif text-xl font-semibold text-bark">{p.herb}</h3>
+                  <KindBadge kind={p.kind} />
+                </div>
+                {p.description && (
+                  <p className="mt-2 text-sm leading-relaxed text-bark-soft line-clamp-2">{p.description}</p>
+                )}
+                <p className="mt-3 text-xs text-bark-soft/80">
+                  by <span className="font-semibold text-forest-deep">{p.profiles?.display_name ?? "a neighbor"}</span>
+                  {p.neighborhood ? ` · ${p.neighborhood}` : ""}
+                </p>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
+  );
+}
+
+function FilterChip({
+  current,
+  value,
+  label,
+}: {
+  current: string | undefined;
+  value: string | undefined;
+  label: string;
+}) {
+  const active = current === value || (!current && !value);
+  const href = value ? `/?kind=${value}` : "/";
+  return (
+    <Link
+      href={href}
+      className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+        active
+          ? "bg-forest-deep text-cream"
+          : "border-2 border-cream-deep bg-white text-bark-soft"
+      }`}
+    >
+      {label}
+    </Link>
+  );
+}
+
+function KindBadge({ kind }: { kind: "offer" | "request" }) {
+  return (
+    <span
+      className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wide ${
+        kind === "offer" ? "bg-leaf/30 text-forest-deep" : "bg-sun/40 text-bark"
+      }`}
+    >
+      {kind === "offer" ? "Offering" : "Wanted"}
+    </span>
   );
 }
