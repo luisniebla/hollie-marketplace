@@ -1,6 +1,5 @@
 "use client";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 const USERNAME_RE = /^[a-zA-Z0-9_]{3,20}$/;
@@ -11,7 +10,6 @@ function usernameToEmail(username: string) {
 }
 
 export default function LoginPage() {
-  const router = useRouter();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -59,8 +57,7 @@ export default function LoginPage() {
       }
     }
 
-    router.refresh();
-    router.push("/");
+    window.location.assign("/");
   }
 
   return (

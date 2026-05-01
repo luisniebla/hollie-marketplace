@@ -32,6 +32,15 @@ export const viewport: Viewport = {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
+  let displayName: string | null = null;
+  if (user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("display_name")
+      .eq("id", user.id)
+      .maybeSingle();
+    displayName = profile?.display_name ?? user.email?.split("@")[0] ?? null;
+  }
 
   return (
     <html lang="en" className={`${fraunces.variable} ${nunito.variable}`}>
@@ -52,6 +61,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                   >
                     💬
                   </Link>
+                  <span
+                    className="rounded-full bg-leaf/30 px-3 py-1.5 text-sm font-bold text-forest-deep"
+                    title="Signed in"
+                  >
+                    @{displayName}
+                  </span>
                   <SignOutButton />
                 </>
               ) : (
