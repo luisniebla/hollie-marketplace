@@ -2,6 +2,7 @@
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { HERBS } from "@/lib/herbs";
 
 export default function NewPostForm() {
   const router = useRouter();
@@ -155,11 +156,17 @@ export default function NewPostForm() {
       <Field label="Which herb?">
         <input
           required
+          list="herbs"
           value={herb}
           onChange={(e) => setHerb(e.target.value)}
           placeholder="Rosemary, basil, mint..."
           className="w-full rounded-2xl border-2 border-cream-deep bg-white px-5 py-3 text-base focus:border-forest focus:outline-none"
         />
+        <datalist id="herbs">
+          {HERBS.map((h) => (
+            <option key={h} value={h} />
+          ))}
+        </datalist>
       </Field>
 
       <Field label="Tell us more (optional)">
