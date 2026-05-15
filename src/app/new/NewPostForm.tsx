@@ -5,7 +5,6 @@ import { createClient } from "@/lib/supabase/client";
 
 export default function NewPostForm() {
   const router = useRouter();
-  const [kind, setKind] = useState<"offer" | "request">("offer");
   const [herb, setHerb] = useState("");
   const [description, setDescription] = useState("");
   const [neighborhood, setNeighborhood] = useState("");
@@ -13,6 +12,7 @@ export default function NewPostForm() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [locating, setLocating] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   function onImageChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -20,6 +20,51 @@ export default function NewPostForm() {
     if (!file) return;
     setImageFile(file);
     setImagePreview(URL.createObjectURL(file));
+  }
+
+  async function useMyLocation() {
+    setError(null);
+    if (!navigator.geolocation) {
+      setError("Your browser doesn't support location.");
+      return;
+    }
+    setLocating(true);
+    try {
+      const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: false,
+          timeout: 10000,
+          maximumAge: 60000,
+        }),
+      );
+      const lat = Math.round(pos.coords.latitude * 200) / 200;
+      const lon = Math.round(pos.coords.longitude * 200) / 200;
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=16&lat=${lat}&lon=${lon}`,
+        { headers: { Accept: "application/json" } },
+      );
+      if (!res.ok) throw new Error("Couldn't look up that location.");
+      const data = await res.json();
+      const a = data.address ?? {};
+      const area =
+        a.neighbourhood ||
+        a.suburb ||
+        a.quarter ||
+        a.hamlet ||
+        a.village ||
+        a.town ||
+        a.city_district ||
+        a.city ||
+        null;
+      const road = a.road ?? null;
+      const label = [area, road && `near ${road}`].filter(Boolean).join(" · ");
+      if (!label) throw new Error("Couldn't find an area for your location.");
+      setNeighborhood(label);
+    } catch (err: any) {
+      setError(err?.message ?? "Couldn't get your location.");
+    } finally {
+      setLocating(false);
+    }
   }
 
   async function onSubmit(e: React.FormEvent) {
@@ -58,7 +103,7 @@ export default function NewPostForm() {
       .from("posts")
       .insert({
         author_id: user.id,
-        kind,
+        kind: "offer",
         herb: herb.trim(),
         description: description.trim() || null,
         neighborhood: neighborhood.trim() || null,
@@ -78,11 +123,6 @@ export default function NewPostForm() {
   return (
     <form onSubmit={onSubmit} className="space-y-5">
       <h1 className="font-serif text-3xl font-bold text-forest-deep">Share something</h1>
-
-      <div className="grid grid-cols-2 gap-3">
-        <KindToggle active={kind === "offer"} onClick={() => setKind("offer")} emoji="🌱" label="I'm offering" />
-        <KindToggle active={kind === "request"} onClick={() => setKind("request")} emoji="🙏" label="I'm asking" />
-      </div>
 
       <div>
         <span className="mb-1.5 block text-sm font-semibold text-bark">Photo *</span>
@@ -130,13 +170,24 @@ export default function NewPostForm() {
         />
       </Field>
 
-      <Field label="Neighborhood">
+      <Field label="Area">
         <input
           value={neighborhood}
           onChange={(e) => setNeighborhood(e.target.value)}
-          placeholder="Arcadia, Roosevelt Row, North Phoenix..."
+          placeholder="Arcadia, near Indian School Rd..."
           className="w-full rounded-2xl border-2 border-cream-deep bg-white px-5 py-3 text-base focus:border-forest focus:outline-none"
         />
+        <button
+          type="button"
+          onClick={useMyLocation}
+          disabled={locating}
+          className="mt-2 inline-flex items-center gap-2 rounded-full border-2 border-cream-deep bg-white px-4 py-2 text-sm font-semibold text-forest-deep transition hover:border-forest disabled:opacity-60"
+        >
+          {locating ? "Finding area..." : "📍 Use my location"}
+        </button>
+        <p className="mt-1 text-xs text-bark-soft">
+          We only save a rough area — never your exact address.
+        </p>
       </Field>
 
       {error && <p className="text-sm text-clay-deep">{error}</p>}
@@ -157,32 +208,5 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       <span className="mb-1.5 block text-sm font-semibold text-bark">{label}</span>
       {children}
     </label>
-  );
-}
-
-function KindToggle({
-  active,
-  onClick,
-  emoji,
-  label,
-}: {
-  active: boolean;
-  onClick: () => void;
-  emoji: string;
-  label: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`flex flex-col items-center gap-1 rounded-2xl border-2 px-4 py-5 text-sm font-semibold transition ${
-        active
-          ? "border-forest bg-leaf/20 text-forest-deep"
-          : "border-cream-deep bg-white text-bark-soft"
-      }`}
-    >
-      <span className="text-2xl">{emoji}</span>
-      {label}
-    </button>
   );
 }
