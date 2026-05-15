@@ -8,6 +8,7 @@ export type Post = {
   herb: string;
   description: string | null;
   neighborhood: string | null;
+  image_url: string | null;
   status: PostStatus;
   created_at: string;
   profiles?: { display_name: string } | null;

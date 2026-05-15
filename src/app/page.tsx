@@ -25,16 +25,7 @@ export default async function Home({
   const { data: posts } = await query;
 
   return (
-    <div className="space-y-6">
-      <section className="space-y-1 pt-2">
-        <h1 className="font-serif text-3xl font-bold leading-tight text-forest-deep">
-          Share herbs with your neighbors.
-        </h1>
-        <p className="text-base text-bark-soft">
-          Got too much rosemary? Need fresh basil? Trade with people nearby in Phoenix.
-        </p>
-      </section>
-
+    <div className="space-y-5">
       <form action="/" className="flex gap-2">
         <input
           name="q"
@@ -65,28 +56,38 @@ export default async function Home({
           <p className="mt-2 text-sm text-bark-soft">Tap &ldquo;+ New post&rdquo; to start it off.</p>
         </div>
       ) : (
-        <ul className="space-y-3">
+        <div className="columns-2 gap-3">
           {(posts as Post[]).map((p) => (
-            <li key={p.id}>
+            <div key={p.id} className="mb-3 break-inside-avoid">
               <Link
                 href={`/posts/${p.id}`}
-                className="block rounded-3xl border-2 border-cream-deep bg-white p-5 transition active:scale-[0.99]"
+                className="block overflow-hidden rounded-2xl bg-white shadow-sm transition active:scale-[0.98]"
               >
-                <div className="flex items-baseline justify-between gap-3">
-                  <h3 className="font-serif text-xl font-semibold text-bark">{p.herb}</h3>
-                  <KindBadge kind={p.kind} />
-                </div>
-                {p.description && (
-                  <p className="mt-2 text-sm leading-relaxed text-bark-soft line-clamp-2">{p.description}</p>
+                {p.image_url ? (
+                  <img src={p.image_url} alt={p.herb} className="w-full object-cover" />
+                ) : (
+                  <div className="flex aspect-square items-center justify-center bg-cream-deep/50 text-4xl">
+                    🌿
+                  </div>
                 )}
-                <p className="mt-3 text-xs text-bark-soft/80">
-                  by <span className="font-semibold text-forest-deep">{p.profiles?.display_name ?? "a neighbor"}</span>
-                  {p.neighborhood ? ` · ${p.neighborhood}` : ""}
-                </p>
+                <div className="p-3">
+                  <div className="flex items-start justify-between gap-1">
+                    <h3 className="font-serif text-base font-semibold leading-tight text-bark">
+                      {p.herb}
+                    </h3>
+                    <KindBadge kind={p.kind} />
+                  </div>
+                  {p.neighborhood && (
+                    <p className="mt-1 text-xs text-bark-soft">📍 {p.neighborhood}</p>
+                  )}
+                  <p className="mt-1 text-xs text-bark-soft/70">
+                    {p.profiles?.display_name ?? "a neighbor"}
+                  </p>
+                </div>
               </Link>
-            </li>
+            </div>
           ))}
-        </ul>
+        </div>
       )}
     </div>
   );
@@ -120,11 +121,11 @@ function FilterChip({
 function KindBadge({ kind }: { kind: "offer" | "request" }) {
   return (
     <span
-      className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wide ${
+      className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
         kind === "offer" ? "bg-leaf/30 text-forest-deep" : "bg-sun/40 text-bark"
       }`}
     >
-      {kind === "offer" ? "Offering" : "Wanted"}
+      {kind === "offer" ? "Offer" : "Want"}
     </span>
   );
 }

@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
@@ -9,20 +9,52 @@ export default function NewPostForm() {
   const [herb, setHerb] = useState("");
   const [description, setDescription] = useState("");
   const [neighborhood, setNeighborhood] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  function onImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+  }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!imageFile) {
+      setError("Please add a photo.");
+      return;
+    }
     setSubmitting(true);
     setError(null);
+
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       router.push("/login");
       return;
     }
-    const { data, error } = await supabase
+
+    const ext = imageFile.name.split(".").pop() ?? "jpg";
+    const path = `${user.id}/${Date.now()}.${ext}`;
+    const { error: uploadError } = await supabase.storage
+      .from("post-images")
+      .upload(path, imageFile, { upsert: false });
+
+    if (uploadError) {
+      setError(uploadError.message);
+      setSubmitting(false);
+      return;
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from("post-images")
+      .getPublicUrl(path);
+
+    const { data, error: insertError } = await supabase
       .from("posts")
       .insert({
         author_id: user.id,
@@ -30,12 +62,14 @@ export default function NewPostForm() {
         herb: herb.trim(),
         description: description.trim() || null,
         neighborhood: neighborhood.trim() || null,
+        image_url: publicUrl,
       })
       .select("id")
       .single();
+
     setSubmitting(false);
-    if (error) {
-      setError(error.message);
+    if (insertError) {
+      setError(insertError.message);
       return;
     }
     router.push(`/posts/${data.id}`);
@@ -48,6 +82,32 @@ export default function NewPostForm() {
       <div className="grid grid-cols-2 gap-3">
         <KindToggle active={kind === "offer"} onClick={() => setKind("offer")} emoji="🌱" label="I'm offering" />
         <KindToggle active={kind === "request"} onClick={() => setKind("request")} emoji="🙏" label="I'm asking" />
+      </div>
+
+      <div>
+        <span className="mb-1.5 block text-sm font-semibold text-bark">Photo *</span>
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          className="relative w-full overflow-hidden rounded-2xl border-2 border-dashed border-cream-deep bg-white transition hover:border-forest"
+        >
+          {imagePreview ? (
+            <img src={imagePreview} alt="Preview" className="w-full object-cover" />
+          ) : (
+            <div className="flex flex-col items-center gap-2 py-10 text-bark-soft">
+              <span className="text-4xl">📷</span>
+              <span className="text-sm font-semibold">Tap to add a photo</span>
+            </div>
+          )}
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={onImageChange}
+          className="hidden"
+        />
       </div>
 
       <Field label="Which herb?">
@@ -65,7 +125,7 @@ export default function NewPostForm() {
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="How much, when it's ready, anything else..."
-          rows={4}
+          rows={3}
           className="w-full rounded-2xl border-2 border-cream-deep bg-white px-5 py-3 text-base focus:border-forest focus:outline-none"
         />
       </Field>

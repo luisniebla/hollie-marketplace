@@ -23,9 +23,11 @@ create table if not exists posts (
   herb text not null,
   description text,
   neighborhood text,
+  image_url text,
   status post_status not null default 'open',
   created_at timestamptz default now()
 );
+alter table posts add column if not exists image_url text;
 create index if not exists posts_created_idx on posts (created_at desc);
 create index if not exists posts_kind_idx on posts (kind);
 
@@ -62,6 +64,19 @@ $$;
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created after insert on auth.users
   for each row execute function handle_new_user();
+
+-- Storage bucket for post images
+insert into storage.buckets (id, name, public)
+values ('post-images', 'post-images', true)
+on conflict (id) do nothing;
+
+drop policy if exists "post images are public" on storage.objects;
+create policy "post images are public" on storage.objects
+  for select using (bucket_id = 'post-images');
+
+drop policy if exists "auth users upload post images" on storage.objects;
+create policy "auth users upload post images" on storage.objects
+  for insert with check (bucket_id = 'post-images' and auth.uid() is not null);
 
 -- Row level security
 alter table profiles enable row level security;

@@ -25,6 +25,12 @@ export default async function PostPage({ params }: { params: Promise<{ id: strin
         ← Back
       </Link>
 
+      {post.image_url && (
+        <div className="overflow-hidden rounded-3xl">
+          <img src={post.image_url} alt={post.herb} className="w-full object-cover" />
+        </div>
+      )}
+
       <div
         className={`rounded-3xl border-2 p-6 ${
           post.kind === "offer" ? "border-leaf/50 bg-leaf/15" : "border-sun/60 bg-sun/15"
