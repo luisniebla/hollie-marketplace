@@ -13,6 +13,7 @@ export default function NewPostForm() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [locating, setLocating] = useState(false);
+  const [coords, setCoords] = useState<{ lat: number; lon: number } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   function onImageChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -60,6 +61,7 @@ export default function NewPostForm() {
       const label = [area, road && `near ${road}`].filter(Boolean).join(" · ");
       if (!label) throw new Error("Couldn't find an area for your location.");
       setNeighborhood(label);
+      setCoords({ lat, lon });
     } catch (err: any) {
       setError(err?.message ?? "Couldn't get your location.");
     } finally {
@@ -188,6 +190,16 @@ export default function NewPostForm() {
         <p className="mt-1 text-xs text-bark-soft">
           We only save a rough area — never your exact address.
         </p>
+        {coords && (
+          <div className="mt-3 overflow-hidden rounded-2xl border-2 border-cream-deep">
+            <iframe
+              title="Approximate area"
+              aria-label="Approximate area map"
+              className="block h-44 w-full"
+              src={`https://www.openstreetmap.org/export/embed.html?bbox=${coords.lon - 0.01}%2C${coords.lat - 0.006}%2C${coords.lon + 0.01}%2C${coords.lat + 0.006}&layer=mapnik&marker=${coords.lat}%2C${coords.lon}`}
+            />
+          </div>
+        )}
       </Field>
 
       {error && <p className="text-sm text-clay-deep">{error}</p>}
