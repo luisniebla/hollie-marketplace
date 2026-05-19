@@ -7,6 +7,7 @@ import { HERBS } from "@/lib/herbs";
 export default function NewPostForm() {
   const router = useRouter();
   const [herb, setHerb] = useState("");
+  const [herbFocused, setHerbFocused] = useState(false);
   const [description, setDescription] = useState("");
   const [neighborhood, setNeighborhood] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -154,19 +155,37 @@ export default function NewPostForm() {
       </div>
 
       <Field label="Which herb?">
-        <input
-          required
-          list="herbs"
-          value={herb}
-          onChange={(e) => setHerb(e.target.value)}
-          placeholder="Rosemary, basil, mint..."
-          className="w-full rounded-2xl border-2 border-cream-deep bg-white px-5 py-3 text-base focus:border-forest focus:outline-none"
-        />
-        <datalist id="herbs">
-          {HERBS.map((h) => (
-            <option key={h} value={h} />
-          ))}
-        </datalist>
+        <div className="relative">
+          <input
+            required
+            value={herb}
+            onChange={(e) => setHerb(e.target.value)}
+            onFocus={() => setHerbFocused(true)}
+            onBlur={() => setTimeout(() => setHerbFocused(false), 150)}
+            placeholder="Rosemary, basil, mint..."
+            autoComplete="off"
+            className="w-full rounded-2xl border-2 border-cream-deep bg-white px-5 py-3 text-base focus:border-forest focus:outline-none"
+          />
+          {herbFocused && herb.trim() && herbSuggestions(herb).length > 0 && (
+            <ul className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-2xl border-2 border-cream-deep bg-white shadow-lg">
+              {herbSuggestions(herb).map((h) => (
+                <li key={h}>
+                  <button
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => {
+                      setHerb(h);
+                      setHerbFocused(false);
+                    }}
+                    className="block w-full px-5 py-2.5 text-left text-base text-bark hover:bg-cream-deep/40"
+                  >
+                    {h}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </Field>
 
       <Field label="Tell us more (optional)">
@@ -219,6 +238,16 @@ export default function NewPostForm() {
       </button>
     </form>
   );
+}
+
+function herbSuggestions(query: string) {
+  const q = query.trim().toLowerCase();
+  if (!q) return [];
+  const starts = HERBS.filter((h) => h.toLowerCase().startsWith(q));
+  const contains = HERBS.filter(
+    (h) => !h.toLowerCase().startsWith(q) && h.toLowerCase().includes(q),
+  );
+  return [...starts, ...contains].slice(0, 6);
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
