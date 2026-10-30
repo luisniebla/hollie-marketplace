@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import ReportButton from "@/components/ReportButton";
 import ChatThread from "./ChatThread";
 
 export const dynamic = "force-dynamic";
@@ -43,6 +44,9 @@ export default async function ChatPage({ params }: { params: Promise<{ id: strin
         </span>
       </Link>
       <ChatThread threadId={id} userId={user.id} initialMessages={initialMessages ?? []} />
+      <div className="flex justify-end pt-2">
+        <ReportButton targetKind="thread" targetId={id} />
+      </div>
     </div>
   );
 }

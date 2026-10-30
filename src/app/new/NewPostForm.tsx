@@ -2,14 +2,21 @@
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { createPost } from "@/app/actions/posts";
 import { HERBS } from "@/lib/herbs";
+import { resizeImage } from "@/lib/image";
+
+type Kind = "offer" | "request";
 
 export default function NewPostForm() {
   const router = useRouter();
+  const [kind, setKind] = useState<Kind>("offer");
   const [herb, setHerb] = useState("");
   const [herbFocused, setHerbFocused] = useState(false);
   const [description, setDescription] = useState("");
   const [neighborhood, setNeighborhood] = useState("");
+  const [forSale, setForSale] = useState(false);
+  const [priceDollars, setPriceDollars] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -64,8 +71,8 @@ export default function NewPostForm() {
       if (!label) throw new Error("Couldn't find an area for your location.");
       setNeighborhood(label);
       setCoords({ lat, lon });
-    } catch (err: any) {
-      setError(err?.message ?? "Couldn't get your location.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't get your location.");
     } finally {
       setLocating(false);
     }
@@ -73,74 +80,125 @@ export default function NewPostForm() {
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!imageFile) {
+    if (kind === "offer" && !imageFile) {
       setError("Please add a photo.");
       return;
     }
     setSubmitting(true);
     setError(null);
 
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      router.push("/login");
-      return;
+    let publicUrl: string | null = null;
+    let imageWidth: number | null = null;
+    let imageHeight: number | null = null;
+    if (imageFile) {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        router.push("/login");
+        return;
+      }
+      let blob: Blob;
+      try {
+        const resized = await resizeImage(imageFile, { maxEdge: 1600, quality: 0.82 });
+        blob = resized.blob;
+        imageWidth = resized.width;
+        imageHeight = resized.height;
+      } catch {
+        blob = imageFile;
+      }
+      const path = `${user.id}/${Date.now()}.webp`;
+      const { error: uploadError } = await supabase.storage
+        .from("post-images")
+        .upload(path, blob, {
+          upsert: false,
+          contentType: "image/webp",
+          cacheControl: "31536000",
+        });
+      if (uploadError) {
+        setError(uploadError.message);
+        setSubmitting(false);
+        return;
+      }
+      publicUrl = supabase.storage.from("post-images").getPublicUrl(path).data.publicUrl;
     }
 
-    const ext = imageFile.name.split(".").pop() ?? "jpg";
-    const path = `${user.id}/${Date.now()}.${ext}`;
-    const { error: uploadError } = await supabase.storage
-      .from("post-images")
-      .upload(path, imageFile, { upsert: false });
-
-    if (uploadError) {
-      setError(uploadError.message);
-      setSubmitting(false);
-      return;
+    let priceCents: number | null = null;
+    if (kind === "offer" && forSale) {
+      const dollars = Number(priceDollars);
+      if (!Number.isFinite(dollars) || dollars < 0) {
+        setError("Enter a price like 3 or 4.50.");
+        setSubmitting(false);
+        return;
+      }
+      priceCents = Math.round(dollars * 100);
     }
 
-    const { data: { publicUrl } } = supabase.storage
-      .from("post-images")
-      .getPublicUrl(path);
-
-    const { data, error: insertError } = await supabase
-      .from("posts")
-      .insert({
-        author_id: user.id,
-        kind: "offer",
-        herb: herb.trim(),
-        description: description.trim() || null,
-        neighborhood: neighborhood.trim() || null,
-        image_url: publicUrl,
-      })
-      .select("id")
-      .single();
+    const result = await createPost({
+      kind,
+      herb: herb.trim(),
+      description: description.trim() || null,
+      neighborhood: neighborhood.trim() || null,
+      image_url: publicUrl,
+      image_width: imageWidth,
+      image_height: imageHeight,
+      price_cents: priceCents,
+      lat: coords?.lat ?? null,
+      lng: coords?.lon ?? null,
+    });
 
     setSubmitting(false);
-    if (insertError) {
-      setError(insertError.message);
+    if (!result.ok) {
+      setError(result.error);
       return;
     }
-    router.push(`/posts/${data.id}`);
+    router.push(`/posts/${result.data.id}`);
   }
 
   return (
     <form onSubmit={onSubmit} className="space-y-5">
-      <h1 className="font-serif text-3xl font-bold text-forest-deep">Share something</h1>
+      <h1 className="font-serif text-3xl font-bold text-forest-deep">
+        {kind === "offer" ? "Share something" : "Ask the neighborhood"}
+      </h1>
+
+      <div className="grid grid-cols-2 gap-1 rounded-full border-2 border-cream-deep bg-cream p-1">
+        <button
+          type="button"
+          onClick={() => setKind("offer")}
+          className={`rounded-full py-2 text-sm font-semibold transition ${
+            kind === "offer" ? "bg-forest text-cream" : "text-bark-soft"
+          }`}
+        >
+          🌱 Offering
+        </button>
+        <button
+          type="button"
+          onClick={() => setKind("request")}
+          className={`rounded-full py-2 text-sm font-semibold transition ${
+            kind === "request" ? "bg-clay text-cream" : "text-bark-soft"
+          }`}
+        >
+          🙏 Looking for
+        </button>
+      </div>
 
       <div>
-        <span className="mb-1.5 block text-sm font-semibold text-bark">Photo *</span>
+        <span className="mb-1.5 block text-sm font-semibold text-bark">
+          {kind === "offer" ? "Photo *" : "Photo (optional)"}
+        </span>
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
           className="relative w-full overflow-hidden rounded-2xl border-2 border-dashed border-cream-deep bg-white transition hover:border-forest"
         >
           {imagePreview ? (
+            // eslint-disable-next-line @next/next/no-img-element -- local object URL, not optimizable
             <img src={imagePreview} alt="Preview" className="w-full object-cover" />
           ) : (
             <div className="flex flex-col items-center gap-2 py-10 text-bark-soft">
               <span className="text-4xl">📷</span>
-              <span className="text-sm font-semibold">Tap to add a photo</span>
+              <span className="text-sm font-semibold">
+                {kind === "offer" ? "Tap to add a photo" : "Add a photo (optional)"}
+              </span>
             </div>
           )}
         </button>
@@ -153,6 +211,49 @@ export default function NewPostForm() {
           className="hidden"
         />
       </div>
+
+      {kind === "offer" && (
+        <div>
+          <span className="mb-1.5 block text-sm font-semibold text-bark">Price</span>
+          <div className="grid grid-cols-2 gap-1 rounded-full border-2 border-cream-deep bg-cream p-1">
+            <button
+              type="button"
+              onClick={() => setForSale(false)}
+              className={`rounded-full py-2 text-sm font-semibold transition ${
+                !forSale ? "bg-leaf text-forest-deep" : "text-bark-soft"
+              }`}
+            >
+              🎁 Free
+            </button>
+            <button
+              type="button"
+              onClick={() => setForSale(true)}
+              className={`rounded-full py-2 text-sm font-semibold transition ${
+                forSale ? "bg-clay text-cream" : "text-bark-soft"
+              }`}
+            >
+              💵 For sale
+            </button>
+          </div>
+          {forSale && (
+            <div className="mt-2 flex items-center gap-2">
+              <span className="text-lg font-semibold text-bark">$</span>
+              <input
+                type="number"
+                inputMode="decimal"
+                step="0.01"
+                min="0"
+                max="1000"
+                value={priceDollars}
+                onChange={(e) => setPriceDollars(e.target.value)}
+                placeholder="3.00"
+                className="w-32 rounded-2xl border-2 border-cream-deep bg-white px-4 py-2 text-base focus:border-forest focus:outline-none"
+              />
+              <span className="text-xs text-bark-soft">Cash or Venmo at pickup.</span>
+            </div>
+          )}
+        </div>
+      )}
 
       <Field label="Which herb?">
         <div className="relative">
@@ -188,11 +289,15 @@ export default function NewPostForm() {
         </div>
       </Field>
 
-      <Field label="Tell us more (optional)">
+      <Field label={kind === "offer" ? "Tell us more (optional)" : "How much, by when, etc."}>
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          placeholder="How much, when it's ready, anything else..."
+          placeholder={
+            kind === "offer"
+              ? "How much, when it's ready, anything else..."
+              : "A small bunch for soup tonight, willing to pick up..."
+          }
           rows={3}
           className="w-full rounded-2xl border-2 border-cream-deep bg-white px-5 py-3 text-base focus:border-forest focus:outline-none"
         />
@@ -234,7 +339,7 @@ export default function NewPostForm() {
         disabled={submitting}
         className="w-full rounded-full bg-clay px-5 py-4 text-base font-bold text-cream shadow-sm transition hover:bg-clay-deep disabled:opacity-60"
       >
-        {submitting ? "Posting..." : "🌿 Post it"}
+        {submitting ? "Posting..." : kind === "offer" ? "🌿 Post it" : "🙏 Post request"}
       </button>
     </form>
   );

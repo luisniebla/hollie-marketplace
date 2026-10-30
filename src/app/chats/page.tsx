@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import PushOptIn from "@/components/PushOptIn";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,7 @@ export default async function ChatsPage() {
   return (
     <div className="space-y-5">
       <h1 className="font-serif text-3xl font-bold text-forest-deep">Your chats</h1>
+      <PushOptIn />
       {(!threads || threads.length === 0) ? (
         <div className="rounded-3xl border-2 border-dashed border-cream-deep bg-white/60 p-10 text-center">
           <p className="text-3xl">🌾</p>

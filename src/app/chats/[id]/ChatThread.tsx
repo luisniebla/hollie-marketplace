@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { sendMessage } from "@/app/actions/messages";
 import type { Message } from "@/lib/types";
 
 export default function ChatThread({
@@ -15,6 +16,7 @@ export default function ChatThread({
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
 
@@ -46,16 +48,19 @@ export default function ChatThread({
     e.preventDefault();
     if (!body.trim()) return;
     setSending(true);
+    setError(null);
     const text = body.trim();
     setBody("");
-    const { error } = await supabase
-      .from("messages")
-      .insert({ thread_id: threadId, sender_id: userId, body: text });
+    const result = await sendMessage({ threadId, body: text });
     setSending(false);
-    if (error) {
+    if (!result.ok) {
       setBody(text);
-      alert(error.message);
+      setError(result.error);
+      return;
     }
+    setMessages((prev) =>
+      prev.some((x) => x.id === result.data.id) ? prev : [...prev, result.data],
+    );
   }
 
   return (
@@ -84,6 +89,7 @@ export default function ChatThread({
         })}
         <div ref={bottomRef} />
       </div>
+      {error && <p className="text-center text-sm text-clay-deep">{error}</p>}
       <form onSubmit={send} className="flex gap-2">
         <input
           value={body}

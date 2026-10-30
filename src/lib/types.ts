@@ -9,6 +9,11 @@ export type Post = {
   description: string | null;
   neighborhood: string | null;
   image_url: string | null;
+  image_width: number | null;
+  image_height: number | null;
+  price_cents: number | null;
+  lat: number | null;
+  lng: number | null;
   status: PostStatus;
   created_at: string;
   profiles?: { display_name: string } | null;
@@ -29,3 +34,11 @@ export type Message = {
   body: string;
   created_at: string;
 };
+
+export function formatPrice(cents: number | null | undefined): string {
+  if (cents == null) return "Free";
+  if (cents === 0) return "Free";
+  return cents % 100 === 0
+    ? `$${cents / 100}`
+    : `$${(cents / 100).toFixed(2)}`;
+}

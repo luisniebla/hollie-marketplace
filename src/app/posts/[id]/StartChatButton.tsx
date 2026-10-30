@@ -1,9 +1,9 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { startThread } from "@/app/actions/threads";
 
-export default function StartChatButton({ postId, posterId }: { postId: string; posterId: string }) {
+export default function StartChatButton({ postId }: { postId: string }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -11,35 +11,17 @@ export default function StartChatButton({ postId, posterId }: { postId: string; 
   async function start() {
     setLoading(true);
     setError(null);
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      router.push("/login");
-      return;
-    }
-
-    const { data: existing } = await supabase
-      .from("threads")
-      .select("id")
-      .eq("post_id", postId)
-      .eq("requester_id", user.id)
-      .maybeSingle();
-
-    let threadId = existing?.id;
-    if (!threadId) {
-      const { data, error } = await supabase
-        .from("threads")
-        .insert({ post_id: postId, poster_id: posterId, requester_id: user.id })
-        .select("id")
-        .single();
-      if (error) {
-        setError(error.message);
-        setLoading(false);
+    const result = await startThread({ postId });
+    if (!result.ok) {
+      if (result.error === "Not signed in.") {
+        router.push("/login");
         return;
       }
-      threadId = data.id;
+      setError(result.error);
+      setLoading(false);
+      return;
     }
-    router.push(`/chats/${threadId}`);
+    router.push(`/chats/${result.data.threadId}`);
   }
 
   return (
