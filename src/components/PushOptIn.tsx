@@ -1,6 +1,18 @@
 "use client";
 import { useEffect, useState } from "react";
+import { Bell, BellOff, BellRing } from "lucide-react";
 import { registerPushSubscription, removePushSubscription } from "@/app/actions/push";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemMedia,
+  ItemTitle,
+} from "@/components/ui/item";
+import { Spinner } from "@/components/ui/spinner";
 
 type Status = "loading" | "unsupported" | "denied" | "subscribed" | "available";
 
@@ -94,41 +106,38 @@ export default function PushOptIn() {
 
   if (status === "denied") {
     return (
-      <p className="rounded-2xl border-2 border-cream-deep bg-white px-4 py-3 text-xs text-bark-soft">
-        Notifications are blocked in your browser. Enable them in site settings to get pinged on
-        new messages.
-      </p>
+      <Alert>
+        <BellOff />
+        <AlertTitle>Notifications are blocked</AlertTitle>
+        <AlertDescription>
+          Allow notifications for this site in your browser settings to hear about new messages.
+        </AlertDescription>
+      </Alert>
     );
   }
 
+  const on = status === "subscribed";
+
   return (
-    <div className="rounded-2xl border-2 border-cream-deep bg-white px-4 py-3 text-sm">
-      {status === "subscribed" ? (
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-bark">🔔 Notifications on for this device</span>
-          <button
-            type="button"
-            onClick={unsubscribe}
-            disabled={busy}
-            className="text-xs font-semibold text-clay-deep disabled:opacity-60"
-          >
-            Turn off
-          </button>
-        </div>
-      ) : (
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-bark">Get notified when you have a new message.</span>
-          <button
-            type="button"
-            onClick={subscribe}
-            disabled={busy}
-            className="rounded-full bg-forest px-4 py-2 text-xs font-bold text-cream transition hover:bg-forest-deep disabled:opacity-60"
-          >
-            {busy ? "..." : "Enable"}
-          </button>
-        </div>
-      )}
-      {error && <p className="mt-2 text-xs text-clay-deep">{error}</p>}
-    </div>
+    <Item variant="outline" className="rounded-3xl bg-secondary/50 p-4">
+      <ItemMedia variant="icon" className="text-rose-deep">{on ? <BellRing /> : <Bell />}</ItemMedia>
+      <ItemContent>
+        <ItemTitle className="font-heading text-xl text-pine">{on ? "Notifications are on" : "Turn on notifications"}</ItemTitle>
+        <ItemDescription>
+          {error ?? (on ? "This device gets a ping for new messages." : "Get a ping on this device when someone messages you.")}
+        </ItemDescription>
+      </ItemContent>
+      <ItemActions>
+        <Button
+          size="sm"
+          variant={on ? "outline" : "default"}
+          onClick={on ? unsubscribe : subscribe}
+          disabled={busy}
+        >
+          {busy && <Spinner data-icon="inline-start" />}
+          {on ? "Turn off" : "Turn on"}
+        </Button>
+      </ItemActions>
+    </Item>
   );
 }

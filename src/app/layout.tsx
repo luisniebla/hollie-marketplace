@@ -1,22 +1,23 @@
 import type { Metadata, Viewport } from "next";
-import { Fraunces, Nunito } from "next/font/google";
+import { Crimson_Pro, Patrick_Hand } from "next/font/google";
 import Link from "next/link";
+import { MessageCircle } from "lucide-react";
 import "./globals.css";
 import { createClient } from "@/lib/supabase/server";
-import SignOutButton from "@/components/SignOutButton";
+import UserMenu from "@/components/UserMenu";
+import ThemeProvider from "@/components/ThemeProvider";
+import { Flourish, LeafMark, Sprig, WaveTop } from "@/components/Botanicals";
+import { Button } from "@/components/ui/button";
+import { Toaster } from "@/components/ui/sonner";
+import { cn } from "@/lib/utils";
 
-const fraunces = Fraunces({
-  variable: "--font-fraunces",
+const crimson = Crimson_Pro({
   subsets: ["latin"],
-  weight: ["500", "600", "700"],
+  variable: "--font-crimson",
+  weight: ["400", "500", "600"],
   style: ["normal", "italic"],
 });
-
-const nunito = Nunito({
-  variable: "--font-nunito",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-});
+const patrick = Patrick_Hand({ subsets: ["latin"], variable: "--font-patrick", weight: "400" });
 
 export const metadata: Metadata = {
   title: "Herb Swap · Phoenix",
@@ -24,7 +25,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#faf5e6",
+  themeColor: "#f9f6ef",
   width: "device-width",
   initialScale: 1,
 };
@@ -43,56 +44,59 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   }
 
   return (
-    <html lang="en" className={`${fraunces.variable} ${nunito.variable}`}>
-      <body className="min-h-screen">
-        <header className="sticky top-0 z-10 border-b border-cream-deep bg-cream/95 backdrop-blur">
-          <nav className="mx-auto flex max-w-xl items-center justify-between px-4 py-3">
-            <Link href="/" className="flex items-center gap-2 font-serif text-2xl font-bold text-forest-deep">
-              <span aria-hidden>🌿</span>
-              <span>Herb Swap</span>
-            </Link>
-            <div className="flex items-center gap-2 text-sm">
-              {user ? (
-                <>
-                  <Link
-                    href="/chats"
-                    className="rounded-full px-3 py-2 font-semibold text-forest-deep hover:bg-cream-deep"
-                    aria-label="Chats"
-                  >
-                    💬
-                  </Link>
-                  <span
-                    className="rounded-full bg-leaf/30 px-3 py-1.5 text-sm font-bold text-forest-deep"
-                    title="Signed in"
-                  >
-                    @{displayName}
-                  </span>
-                  <SignOutButton />
-                </>
-              ) : (
-                <Link
-                  href="/login"
-                  className="rounded-full bg-forest px-4 py-2 font-semibold text-cream shadow-sm transition hover:bg-forest-deep"
-                >
-                  Sign in
-                </Link>
-              )}
-            </div>
-          </nav>
-        </header>
-        <main className="mx-auto max-w-xl px-4 pb-28 pt-5">{children}</main>
-        {user && (
-          <Link
-            href="/new"
-            className="fixed bottom-6 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full bg-clay px-6 py-4 text-base font-bold text-cream shadow-lg shadow-clay/30 transition hover:bg-clay-deep"
-          >
-            <span aria-hidden className="text-xl leading-none">+</span>
-            New post
-          </Link>
-        )}
-        <footer className="mx-auto max-w-xl px-4 pb-6 text-center text-xs text-bark-soft">
-          🌵 Phoenix, AZ · be kind, share herbs
-        </footer>
+    <html
+      lang="en"
+      className={cn("antialiased", crimson.variable, patrick.variable)}
+      suppressHydrationWarning
+    >
+      <body className="relative flex min-h-screen flex-col overflow-x-clip">
+        <ThemeProvider>
+          <WaveTop className="top-0 right-0 h-28 w-[78%] sm:h-36 sm:w-[60%]" />
+          <header className="relative z-10">
+            <nav className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-4">
+              <Link href="/" className="flex items-center gap-2">
+                <LeafMark />
+                <span className="flex flex-col leading-none">
+                  <span className="font-heading text-2xl text-pine">Herb Swap</span>
+                  <span className="font-heading text-sm text-rose-deep">sprigs, seeds &amp; swaps</span>
+                </span>
+              </Link>
+              <div className="flex items-center gap-1">
+                {user ? (
+                  <>
+                    <Button asChild variant="ghost" className="hidden font-heading text-lg sm:inline-flex">
+                      <Link href="/">Browse</Link>
+                    </Button>
+                    <Button asChild>
+                      <Link href="/new">Share</Link>
+                    </Button>
+                    <Button asChild variant="ghost" size="icon" aria-label="Messages">
+                      <Link href="/chats">
+                        <MessageCircle className="size-5" />
+                      </Link>
+                    </Button>
+                    <UserMenu displayName={displayName ?? "you"} email={user.email ?? null} />
+                  </>
+                ) : (
+                  <Button asChild>
+                    <Link href="/login">Sign in</Link>
+                  </Button>
+                )}
+              </div>
+            </nav>
+          </header>
+          <main className="relative z-0 mx-auto w-full max-w-3xl flex-1 px-4 pt-4 pb-20">{children}</main>
+          <footer className="mx-auto flex w-full max-w-3xl flex-col items-center gap-3 px-4 pb-10 text-center">
+            <Sprig className="w-14 opacity-80" />
+            <Flourish />
+            <p className="font-heading text-xl text-pine">Grown &amp; shared in Phoenix, AZ</p>
+            <p className="max-w-sm text-sm text-muted-foreground">
+              Swaps are for kitchen and garden use. Nothing here is medical advice. Be kind, wash
+              your greens.
+            </p>
+          </footer>
+          <Toaster position="top-center" />
+        </ThemeProvider>
       </body>
     </html>
   );

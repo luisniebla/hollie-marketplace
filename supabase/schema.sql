@@ -235,3 +235,15 @@ create policy "thread participants send messages" on messages for insert
   with check (sender_id = auth.uid() and exists (
     select 1 from threads t where t.id = thread_id
     and (t.poster_id = auth.uid() or t.requester_id = auth.uid())));
+
+-- Table privileges. Newer Supabase projects no longer auto-grant the API roles
+-- access to tables in `public`, so without these every query fails with
+-- "permission denied for table ..." before RLS is even consulted. Grants mirror
+-- the policies above; RLS still filters rows.
+grant usage on schema public to anon, authenticated;
+grant select on profiles, posts to anon;
+grant select, update on profiles to authenticated;
+grant select, insert, update, delete on posts to authenticated;
+grant select, insert on threads, messages, reports to authenticated;
+grant select, insert, update, delete on push_subscriptions to authenticated;
+grant execute on function posts_near to anon, authenticated;

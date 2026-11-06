@@ -1,10 +1,16 @@
 "use client";
 import { useState } from "react";
+import { CircleAlert } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Spinner } from "@/components/ui/spinner";
+import { Flourish, Sprig } from "@/components/Botanicals";
 
 function GoogleMark() {
   return (
-    <svg viewBox="0 0 48 48" aria-hidden className="h-5 w-5">
+    <svg viewBox="0 0 48 48" aria-hidden className="size-4">
       <path
         fill="#4285F4"
         d="M45.12 24.5c0-1.56-.14-3.06-.4-4.5H24v8.51h11.84c-.51 2.75-2.06 5.08-4.39 6.64v5.52h7.11c4.16-3.83 6.56-9.47 6.56-16.17z"
@@ -47,30 +53,29 @@ export default function LoginForm({ initialError }: { initialError?: string }) {
   }
 
   return (
-    <div className="space-y-5 rounded-3xl border-2 border-cream-deep bg-white p-8">
-      <div>
-        <h1 className="font-serif text-2xl font-bold text-forest-deep">Welcome 🌿</h1>
-        <p className="mt-1 text-sm text-bark-soft">
-          Sign in with Google to post and chat. New here? Same thing — we&apos;ll set up your
-          account.
-        </p>
-      </div>
-
-      {error && <p className="text-sm text-clay-deep">{error}</p>}
-
-      <button
-        type="button"
-        onClick={signInWithGoogle}
-        disabled={loading}
-        className="flex w-full items-center justify-center gap-3 rounded-full border-2 border-cream-deep bg-white px-5 py-4 text-base font-bold text-bark shadow-sm transition hover:bg-cream disabled:opacity-60"
-      >
-        <GoogleMark />
-        {loading ? "Redirecting..." : "Continue with Google"}
-      </button>
-
-      <p className="text-center text-xs text-bark-soft">
-        We only use your Google account to sign you in.
-      </p>
-    </div>
+    <Card className="relative mx-auto mt-10 max-w-md overflow-visible rounded-3xl px-2 py-8 ring-border">
+      <Sprig className="absolute -top-14 -right-4 w-20" />
+      <CardHeader className="gap-3">
+        <CardTitle className="text-4xl leading-none text-pine">Welcome to the garden</CardTitle>
+        <Flourish />
+        <CardDescription className="text-lg">
+          Sign in with Google to share herbs and message neighbors. First time here? We&apos;ll
+          plant your account.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        {error && (
+          <Alert variant="destructive">
+            <CircleAlert />
+            <AlertTitle>Couldn&apos;t sign you in</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+        <Button variant="outline" size="lg" className="bg-card" onClick={signInWithGoogle} disabled={loading}>
+          {loading ? <Spinner data-icon="inline-start" /> : <GoogleMark />}
+          {loading ? "Redirecting" : "Continue with Google"}
+        </Button>
+      </CardContent>
+    </Card>
   );
 }

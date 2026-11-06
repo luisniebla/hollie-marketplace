@@ -1,35 +1,94 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-@theme {
-  --color-cream: #faf5e6;
-  --color-cream-deep: #f0e7c9;
-  --color-bark: #2f2417;
-  --color-bark-soft: #5a4a36;
-  --color-forest: #2d6a4f;
-  --color-forest-deep: #1b4332;
-  --color-leaf: #74c69d;
-  --color-clay: #d97757;
-  --color-clay-deep: #b85a3d;
-  --color-sun: #f1b53b;
-  --font-serif: var(--font-fraunces), Georgia, "Times New Roman", serif;
-  --font-sans: var(--font-nunito), system-ui, -apple-system, sans-serif;
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-sans: var(--font-crimson), Georgia, "Times New Roman", serif;
+  --font-heading: var(--font-patrick), "Comic Sans MS", cursive;
+  --font-mono: ui-monospace, monospace;
+
+  /* Apothecary accents (beyond shadcn's semantic tokens) */
+  --color-rose: var(--rose);
+  --color-rose-deep: var(--rose-deep);
+  --color-pine: var(--pine);
+  --color-sage: var(--sage);
+  --color-marigold: var(--marigold);
+
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-html, body {
-  background: var(--color-cream);
-  color: var(--color-bark);
+/* Light only — the parchment-and-rose palette is the brand. */
+:root {
+  --background: #f9f6ef;
+  --foreground: #2a2823;
+  --card: #fffdf8;
+  --card-foreground: #2a2823;
+  --popover: #fffdf8;
+  --popover-foreground: #2a2823;
+  --primary: #8b9a5e;
+  --primary-foreground: #1d2618;
+  --secondary: #efd8d5;
+  --secondary-foreground: #6a3f3c;
+  --muted: #f1ebdf;
+  --muted-foreground: #6d685c;
+  --accent: #ebe4d3;
+  --accent-foreground: #2a2823;
+  --destructive: #b0503d;
+  --border: #e5dccb;
+  --input: #ddd2bd;
+  --ring: #8b9a5e;
+  --radius: 0.875rem;
+
+  --rose: #e8cac7;
+  --rose-deep: #c38f8b;
+  --pine: #1f3a36;
+  --sage: #a8b47d;
+  --marigold: #d9ae55;
 }
 
-body {
-  font-family: var(--font-sans);
-}
-
-h1, h2, h3 {
-  font-family: var(--font-serif);
-  letter-spacing: -0.01em;
-}
-
-::selection {
-  background: var(--color-sun);
-  color: var(--color-bark);
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-size: 1.0625rem;
+  }
+  html {
+    @apply font-sans;
+  }
+  h1, h2, h3 {
+    @apply font-heading text-pine;
+    letter-spacing: 0;
+  }
+  ::selection {
+    background: var(--rose);
+    color: var(--pine);
+  }
 }

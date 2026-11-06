@@ -42,3 +42,13 @@ export function formatPrice(cents: number | null | undefined): string {
     ? `$${cents / 100}`
     : `$${(cents / 100).toFixed(2)}`;
 }
+
+// Lives here, not in actions/reports.ts: a "use server" module can only export
+// async functions, so client components can't import constants from it.
+export const REPORT_REASONS = [
+  "Spam",
+  "Inappropriate content",
+  "Off-topic (not herb-related)",
+  "Harassment",
+  "Other",
+] as const;

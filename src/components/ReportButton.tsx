@@ -1,6 +1,30 @@
 "use client";
 import { useState } from "react";
-import { submitReport, REPORT_REASONS } from "@/app/actions/reports";
+import { Flag } from "lucide-react";
+import { toast } from "sonner";
+import { submitReport } from "@/app/actions/reports";
+import { REPORT_REASONS } from "@/lib/types";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Spinner } from "@/components/ui/spinner";
+import { Textarea } from "@/components/ui/textarea";
 
 type Reason = (typeof REPORT_REASONS)[number];
 
@@ -15,12 +39,10 @@ export default function ReportButton({
   const [reason, setReason] = useState<Reason>(REPORT_REASONS[0]);
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
-  const [done, setDone] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  async function submit() {
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
     setBusy(true);
-    setError(null);
     const result = await submitReport({
       targetKind,
       targetId,
@@ -29,72 +51,69 @@ export default function ReportButton({
     });
     setBusy(false);
     if (!result.ok) {
-      setError(result.error);
+      toast.error(result.error);
       return;
     }
-    setDone(true);
+    setOpen(false);
+    setNote("");
+    toast.success("Report sent. A moderator will take a look.");
   }
 
-  if (!open) {
-    return (
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="text-xs font-semibold text-bark-soft hover:text-clay-deep"
-      >
-        🚩 Report
-      </button>
-    );
-  }
-
-  if (done) {
-    return (
-      <p className="rounded-2xl border-2 border-leaf/40 bg-leaf/10 px-4 py-3 text-sm text-forest-deep">
-        Thanks — a moderator will take a look.
-      </p>
-    );
-  }
+  const noun = targetKind === "post" ? "post" : "conversation";
 
   return (
-    <div className="space-y-3 rounded-2xl border-2 border-clay/40 bg-white p-4">
-      <p className="text-sm font-semibold text-bark">Report this {targetKind}</p>
-      <select
-        value={reason}
-        onChange={(e) => setReason(e.target.value as Reason)}
-        className="w-full rounded-2xl border-2 border-cream-deep bg-white px-4 py-2 text-sm"
-      >
-        {REPORT_REASONS.map((r) => (
-          <option key={r} value={r}>
-            {r}
-          </option>
-        ))}
-      </select>
-      <textarea
-        value={note}
-        onChange={(e) => setNote(e.target.value)}
-        rows={2}
-        placeholder="More detail (optional)"
-        className="w-full rounded-2xl border-2 border-cream-deep bg-white px-4 py-2 text-sm focus:border-forest focus:outline-none"
-      />
-      {error && <p className="text-sm text-clay-deep">{error}</p>}
-      <div className="flex gap-2">
-        <button
-          type="button"
-          onClick={submit}
-          disabled={busy}
-          className="flex-1 rounded-full bg-clay px-4 py-2 text-sm font-bold text-cream transition hover:bg-clay-deep disabled:opacity-60"
-        >
-          {busy ? "Sending..." : "Send report"}
-        </button>
-        <button
-          type="button"
-          onClick={() => setOpen(false)}
-          disabled={busy}
-          className="flex-1 rounded-full border-2 border-cream-deep bg-white px-4 py-2 text-sm font-semibold text-bark"
-        >
-          Cancel
-        </button>
-      </div>
-    </div>
+    <Dialog open={open} onOpenChange={(o) => !busy && setOpen(o)}>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="sm" className="text-muted-foreground">
+          <Flag data-icon="inline-start" />
+          Report
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <form onSubmit={submit} className="flex flex-col gap-4">
+          <DialogHeader>
+            <DialogTitle>Report this {noun}</DialogTitle>
+            <DialogDescription>Tell us what&apos;s wrong and a moderator will take a look.</DialogDescription>
+          </DialogHeader>
+          <FieldGroup>
+            <Field>
+              <FieldLabel htmlFor="report-reason">Reason</FieldLabel>
+              <Select value={reason} onValueChange={(v) => setReason(v as Reason)}>
+                <SelectTrigger id="report-reason" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {REPORT_REASONS.map((r) => (
+                    <SelectItem key={r} value={r}>
+                      {r}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="report-note">Details (optional)</FieldLabel>
+              <Textarea
+                id="report-note"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                rows={3}
+              />
+            </Field>
+          </FieldGroup>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="outline" disabled={busy}>
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button type="submit" disabled={busy}>
+              {busy && <Spinner data-icon="inline-start" />}
+              Send report
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

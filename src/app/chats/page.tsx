@@ -1,7 +1,29 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { ChevronRight } from "lucide-react";
+import { PageHeading, Sprig } from "@/components/Botanicals";
 import { createClient } from "@/lib/supabase/server";
 import PushOptIn from "@/components/PushOptIn";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemGroup,
+  ItemMedia,
+  ItemSeparator,
+  ItemTitle,
+} from "@/components/ui/item";
 
 export const dynamic = "force-dynamic";
 
@@ -19,18 +41,29 @@ export default async function ChatsPage() {
     .order("created_at", { ascending: false });
 
   return (
-    <div className="space-y-5">
-      <h1 className="font-serif text-3xl font-bold text-forest-deep">Your chats</h1>
+    <div className="flex flex-col gap-6">
+      <PageHeading title="Garden notes" subtitle="Your conversations with neighbors." />
       <PushOptIn />
       {(!threads || threads.length === 0) ? (
-        <div className="rounded-3xl border-2 border-dashed border-cream-deep bg-white/60 p-10 text-center">
-          <p className="text-3xl">🌾</p>
-          <p className="mt-3 font-serif text-xl text-forest-deep">No conversations yet</p>
-          <p className="mt-2 text-sm text-bark-soft">Find a post and say hi.</p>
-        </div>
+        <Empty className="rounded-3xl border border-dashed border-rose-deep/50 bg-card/60">
+          <EmptyHeader>
+            <EmptyMedia>
+              <Sprig className="w-16" />
+            </EmptyMedia>
+            <EmptyTitle className="text-2xl text-pine">No conversations yet</EmptyTitle>
+            <EmptyDescription className="text-base">
+              Find an herb you like and say hello to the grower.
+            </EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
+            <Button asChild>
+              <Link href="/">Browse herbs</Link>
+            </Button>
+          </EmptyContent>
+        </Empty>
       ) : (
-        <ul className="space-y-3">
-          {threads.map((t) => {
+        <ItemGroup className="gap-0 rounded-3xl border bg-card p-2">
+          {threads.map((t, i) => {
             const otherName =
               t.poster_id === user.id
                 ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -41,25 +74,30 @@ export default async function ChatsPage() {
             const post = t.posts as any;
             const initial = (otherName ?? "?").charAt(0).toUpperCase();
             return (
-              <li key={t.id}>
-                <Link
-                  href={`/chats/${t.id}`}
-                  className="flex items-center gap-4 rounded-3xl border-2 border-cream-deep bg-white p-4 transition active:scale-[0.99]"
-                >
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-leaf/40 font-serif text-xl font-bold text-forest-deep">
-                    {initial}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-semibold text-bark">{otherName ?? "a neighbor"}</p>
-                    <p className="truncate text-sm text-bark-soft">
-                      {post?.kind === "offer" ? "🌱" : "🙏"} {post?.herb}
-                    </p>
-                  </div>
-                </Link>
-              </li>
+              <div key={t.id} role="listitem">
+                {i > 0 && <ItemSeparator className="my-0" />}
+                <Item asChild className="rounded-2xl">
+                  <Link href={`/chats/${t.id}`}>
+                    <ItemMedia>
+                      <Avatar size="lg">
+                        <AvatarFallback className="bg-secondary font-heading text-xl text-secondary-foreground">{initial}</AvatarFallback>
+                      </Avatar>
+                    </ItemMedia>
+                    <ItemContent>
+                      <ItemTitle className="font-heading text-xl text-pine">{otherName ?? "A neighbor"}</ItemTitle>
+                      <ItemDescription className="text-base italic">
+                        {post?.herb}, {post?.kind === "offer" ? "on offer" : "wanted"}
+                      </ItemDescription>
+                    </ItemContent>
+                    <ItemActions>
+                      <ChevronRight className="size-4 text-muted-foreground" />
+                    </ItemActions>
+                  </Link>
+                </Item>
+              </div>
             );
           })}
-        </ul>
+        </ItemGroup>
       )}
     </div>
   );

@@ -1,13 +1,22 @@
 "use client";
 import { useState } from "react";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { MapPin, X } from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+
+const RADII = [
+  { km: "3", label: "2 mi" },
+  { km: "8", label: "5 mi" },
+  { km: "16", label: "10 mi" },
+] as const;
 
 export default function NearMeButton() {
   const router = useRouter();
   const params = useSearchParams();
   const [locating, setLocating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const lat = params.get("lat");
   const lng = params.get("lng");
@@ -15,9 +24,8 @@ export default function NearMeButton() {
   const active = lat && lng;
 
   async function findMe() {
-    setError(null);
     if (!navigator.geolocation) {
-      setError("Your browser doesn't support location.");
+      toast.error("Your browser doesn't support location.");
       return;
     }
     setLocating(true);
@@ -35,13 +43,14 @@ export default function NearMeButton() {
       if (!next.has("km")) next.set("km", "8");
       router.push(`/?${next.toString()}`);
     } catch {
-      setError("Couldn't get your location.");
+      toast.error("Couldn't get your location.");
     } finally {
       setLocating(false);
     }
   }
 
   function setRadius(nextKm: string) {
+    if (!nextKm) return;
     const next = new URLSearchParams(params.toString());
     next.set("km", nextKm);
     router.push(`/?${next.toString()}`);
@@ -58,45 +67,28 @@ export default function NearMeButton() {
 
   if (active) {
     return (
-      <div className="flex flex-wrap items-center gap-2 rounded-full border-2 border-leaf/40 bg-leaf/10 px-3 py-2 text-sm">
-        <span className="font-semibold text-forest-deep">📍 Within</span>
-        {(["3", "8", "16"] as const).map((opt) => (
-          <button
-            key={opt}
-            type="button"
-            onClick={() => setRadius(opt)}
-            className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${
-              km === opt ? "bg-forest text-cream" : "text-forest-deep hover:bg-leaf/30"
-            }`}
-          >
-            {opt === "3" ? "2 mi" : opt === "8" ? "5 mi" : "10 mi"}
-          </button>
-        ))}
-        <Link
-          href="/"
-          onClick={(e) => {
-            e.preventDefault();
-            clearLocation();
-          }}
-          className="ml-auto text-xs font-semibold text-bark-soft hover:text-clay-deep"
-        >
+      <div className="flex items-center gap-2 text-sm">
+        <MapPin className="size-4 text-muted-foreground" />
+        <span className="text-muted-foreground">Within</span>
+        <ToggleGroup type="single" variant="outline" size="sm" value={km} onValueChange={setRadius}>
+          {RADII.map((r) => (
+            <ToggleGroupItem key={r.km} value={r.km}>
+              {r.label}
+            </ToggleGroupItem>
+          ))}
+        </ToggleGroup>
+        <Button variant="ghost" size="sm" className="ml-auto" onClick={clearLocation}>
+          <X data-icon="inline-start" />
           Clear
-        </Link>
+        </Button>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-1">
-      <button
-        type="button"
-        onClick={findMe}
-        disabled={locating}
-        className="inline-flex items-center gap-2 self-start rounded-full border-2 border-cream-deep bg-white px-4 py-2 text-sm font-semibold text-forest-deep transition hover:border-forest disabled:opacity-60"
-      >
-        {locating ? "Finding you..." : "📍 Show posts near me"}
-      </button>
-      {error && <p className="text-xs text-clay-deep">{error}</p>}
-    </div>
+    <Button variant="outline" size="sm" className="self-start" onClick={findMe} disabled={locating}>
+      {locating ? <Spinner data-icon="inline-start" /> : <MapPin data-icon="inline-start" />}
+      {locating ? "Finding you" : "Near me"}
+    </Button>
   );
 }

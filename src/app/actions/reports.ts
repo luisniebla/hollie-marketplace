@@ -3,15 +3,8 @@
 import { z } from "zod";
 import { requireUser, UnauthorizedError } from "@/lib/auth";
 import { rateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { REPORT_REASONS } from "@/lib/types";
 import type { ActionResult } from "./posts";
-
-export const REPORT_REASONS = [
-  "Spam",
-  "Inappropriate content",
-  "Off-topic (not herb-related)",
-  "Harassment",
-  "Other",
-] as const;
 
 const ReportInput = z.object({
   targetKind: z.enum(["post", "thread"]),
